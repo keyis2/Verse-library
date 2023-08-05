@@ -1,5 +1,5 @@
 '''
-This file contains plotter code for DryVR reachtube output
+This file contains 2D plotter code for DryVR reachtube output
 '''
 
 from __future__ import annotations
@@ -11,7 +11,8 @@ from plotly.graph_objs.scatter import Marker
 from verse.analysis.analysis_tree import AnalysisTree, AnalysisTreeNode
 from verse.map.lane_map import LaneMap
 
-colors = [
+# some default settings
+color_array_def = [
     ["#CC0000", "#FF0000", "#FF3333", "#FF6666", "#FF9999", "#FFCCCC"],  # red
     ["#0000CC", "#0000FF", "#3333FF", "#6666FF", "#9999FF", "#CCCCFF"],  # blue
     ["#00CC00", "#00FF00", "#33FF33", "#66FF66", "#99FF99", "#CCFFCC"],  # green
@@ -26,23 +27,6 @@ colors = [
     ["#00CC00", "#00FF00", "#33FF33", "#66FF66", "#99FF99", "#E5FFCC"],  # lime
     ["#CC0066", "#FF007F", "#FF3399", "#FF66B2", "#FF99CC", "#FFCCE5"],  # pink
 ]
-scheme_dict = {
-    "red": 0,
-    "orange": 1,
-    "green": 2,
-    "yellow": 3,
-    "yellowgreen": 4,
-    "lime": 5,
-    "springgreen": 6,
-    "cyan": 7,
-    "cyanblue": 8,
-    "blue": 9,
-    "purple": 10,
-    "magenta": 11,
-    "pink": 12,
-}
-scheme_list = list(scheme_dict.keys())
-num_theme = len(colors)
 color_cnt = 0
 text_size = 8
 scale_factor = 0.25
@@ -61,26 +45,47 @@ def simulation_tree(
     x_dim: int = 1,
     y_dim: int = 2,
     print_dim_list=None,
+    color_array=None,
     map_type="lines",
     scale_type="trace",
     label_mode="None",
     sample_rate=1,
 ):
     '''This function adds the traces of a simulation as a 2D plot to a plotly graph object.
+
         Parameters:
-            root (Union[AnalysisTree, AnalysisTreeNode]): Root of the simulation tree to be plotted.
-            map (Map): Map to be plotted in the background.
-            fig (plotly.graph_objects): Input figure object in which the plot is added.
-            x_dim (int): The state dimension to be plotted along x-axis.
-            y_dim (int): The state dimension to be plotted in y-axis.
-            scale_type (string): Only allowed value is "trace".
-            label_mode (string): Only allowed value is "None".
+        ----------
+            root: (Union[AnalysisTree, AnalysisTreeNode])
+                Root of the simulation tree to be plotted.
+            map: LaneMap
+                Map to be plotted in the background.
+            fig: plotly.graph_objects
+                Input figure object in which the plot is added.
+            x_dim: int
+                The state dimension to be plotted along x-axis.
+            y_dim: int
+                The state dimension to be plotted in y-axis.
+            map_type: str
+                Allowed values are "lines", "fill" and "detailed". 
+                "lines": map is only drawn by margins of lanes. 
+                "fill": the lanes will be filled with semitransparent colors. 
+                "detailed": the lanes will be filled some colors according to the speed limits of lanes (if the information is given).
+            scale_type: str
+                Only allowed value is "trace". It shows the whole trace as the main part of the plot. Otherwise, the whole map will be displayed.
+            label_mode: str
+                Only allowed value is "None". It does not show the mode names of agents on the plot. Otherwise, mode names will be displayed when transition happens.
+            sample_rate: int
+                The plotter samples one point for every ``sample_rate`` points. 
         Returns:
-            fig (plotly.graph_objects): Figure which includes the plots.
+            fig: plotly.graph_objects
+                Figure which includes the plots.
     '''
     if isinstance(root, AnalysisTree):
         root = root.root
     root = sample_trace(root, sample_rate)
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)
     fig = draw_map(map=map, fig=fig, fill_type=map_type)
     agent_list = list(root.agent.keys())
     # input check
@@ -89,11 +94,17 @@ def simulation_tree(
     if print_dim_list is None:
         print_dim_list = range(0, num_dim)
 
-    # scheme_list = list(scheme_dict.keys())
     i = 0
     for agent_id in agent_list:
         fig = simulation_tree_single(
-            root, agent_id, fig, x_dim, y_dim, scheme_list[i], print_dim_list
+            root, 
+            agent_id, 
+            fig, 
+            x_dim, 
+            y_dim, 
+            color_array,
+            i,
+            print_dim_list
         )
         i = (i + 1) % num_theme
     if scale_type == "trace":
@@ -116,7 +127,7 @@ def simulation_tree(
                 x_max = max(x_max, max(trace[:, x_dim]))
                 y_min = min(y_min, min(trace[:, y_dim]))
                 y_max = max(y_max, max(trace[:, y_dim]))
-            mode_point_color = colors[agent_list.index(agent_id) % num_theme][0]
+            mode_point_color = color_array[agent_list.index(agent_id) % num_theme][0]
             if label_mode != "None":
                 if previous_mode[agent_id] != node.mode[agent_id]:
                     text_pos, text = get_text_pos(node.mode[agent_id][0])
@@ -200,6 +211,7 @@ def simulation_anime(
     x_dim: int = 1,
     y_dim: int = 2,
     print_dim_list=None,
+    color_array=None,
     map_type="lines",
     scale_type="trace",
     label_mode="None",
@@ -213,6 +225,9 @@ def simulation_anime(
     """Trail: It gives the animation of the simulation with trail."""
     if isinstance(root, AnalysisTree):
         root = root.root
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)
     if time_step != None:
         num_digit = num_digits(time_step)
     else:
@@ -267,7 +282,7 @@ def simulation_anime(
         # make data
         trace_dict = timed_point_dict[0]
         for agent_id, trace_list in trace_dict.items():
-            color = colors[agent_list.index(agent_id) % num_theme][1]
+            color = color_array[agent_list.index(agent_id) % num_theme][1]
             x_list = []
             y_list = []
             text_list = []
@@ -296,7 +311,7 @@ def simulation_anime(
             frame = {"data": [], "layout": {"annotations": []}, "name": time_point}
             point_list = timed_point_dict[time_point]
             for agent_id, trace_list in point_list.items():
-                color = colors[agent_list.index(agent_id) % num_theme][1]
+                color = color_array[agent_list.index(agent_id) % num_theme][1]
                 x_list = []
                 y_list = []
                 text_list = []
@@ -366,7 +381,7 @@ def simulation_anime(
             time_point = time_list[time_point_id]
             frame = {"data": [], "layout": {"annotations": []}, "name": time_point}
             for agent_id in agent_list:
-                color = colors[agent_list.index(agent_id) % num_theme][1]
+                color = color_array[agent_list.index(agent_id) % num_theme][1]
                 for id in range(0, trail_len, step):
                     tmp_point_list = timed_point_dict[time_list[time_point_id - id]][agent_id]
                     trace_x = []
@@ -445,7 +460,7 @@ def simulation_anime(
             trace_y = trace[:, y_dim].tolist()
             trace_x = trace[:, x_dim].tolist()
             i = agent_list.index(agent_id)
-            mode_point_color = colors[agent_list.index(agent_id) % num_theme][0]
+            mode_point_color = color_array[agent_list.index(agent_id) % num_theme][0]
             if label_mode != "None":
                 if previous_mode[agent_id] != node.mode[agent_id]:
                     text_pos, text = get_text_pos(node.mode[agent_id][0])
@@ -512,19 +527,20 @@ def reachtube_tree(
     x_dim: int = 1,
     y_dim: int = 2,
     print_dim_list=None,
+    color_array=None,
     map_type="lines",
     scale_type="trace",
     label_mode="None",
     sample_rate=1,
     combine_rect=1,
-    plot_color=None,
 ):
     """It statically shows all the traces of the verfication."""
-    if plot_color is None:
-        plot_color = colors
     if isinstance(root, AnalysisTree):
         root = root.root
     root = sample_trace(root, sample_rate)
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)
     fig = draw_map(map=map, fig=fig, fill_type=map_type)
     agent_list = list(root.agent.keys())
     # input check
@@ -533,7 +549,6 @@ def reachtube_tree(
     if print_dim_list is None:
         print_dim_list = range(0, num_dim)
 
-    # scheme_list = list(scheme_dict.keys())
     i = 0
     for agent_id in agent_list:
         fig = reachtube_tree_single(
@@ -542,10 +557,9 @@ def reachtube_tree(
             fig,
             x_dim,
             y_dim,
-            scheme_list[i],
-            print_dim_list,
+            color_array,
+            i,
             combine_rect,
-            plot_color=plot_color,
         )
         i = (i + 1) % num_theme
     if scale_type == "trace":
@@ -574,7 +588,7 @@ def reachtube_tree(
             if label_mode != "None":
                 if previous_mode[agent_id] != node.mode[agent_id]:
                     text_pos, text = get_text_pos(node.mode[agent_id][0])
-                    mode_point_color = plot_color[agent_list.index(agent_id) % num_theme][0]
+                    mode_point_color = color_array[agent_list.index(agent_id) % num_theme][0]
                     fig.add_trace(
                         go.Scatter(
                             x=[trace[0, x_dim]],
@@ -620,6 +634,7 @@ def reachtube_anime(
     x_dim: int = 1,
     y_dim: int = 2,
     print_dim_list=None,
+    color_array=None,
     map_type="lines",
     scale_type="trace",
     label_mode="None",
@@ -631,6 +646,9 @@ def reachtube_anime(
     """It gives the animation of the verfication."""
     if isinstance(root, AnalysisTree):
         root = root.root
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)
     if time_step != None:
         num_digit = num_digits(time_step)
     else:
@@ -646,7 +664,7 @@ def reachtube_anime(
     check_dim(num_dim, x_dim, y_dim, print_dim_list)
     if print_dim_list is None:
         print_dim_list = range(0, num_dim)
-    # scheme_list = list(scheme_dict.keys())
+
     num_points = 0
     while queue != []:
         node = queue.pop()
@@ -718,9 +736,9 @@ def reachtube_anime(
             fig,
             x_dim,
             y_dim,
-            scheme_list[i],
-            print_dim_list,
-            combine_rect=combine_rect,
+            color_array,
+            i,
+            combine_rect,
         )
         i = (i + 1) % num_theme
     if scale_type == "trace":
@@ -750,7 +768,7 @@ def reachtube_anime(
                     x1 = trace[1, x_dim]
                     y0 = trace[0, y_dim]
                     y1 = trace[1, y_dim]
-                    mode_point_color = colors[agent_list.index(agent_id) % num_theme][0]
+                    mode_point_color = color_array[agent_list.index(agent_id) % num_theme][0]
                     fig.add_trace(
                         go.Scatter(
                             x=[(x0 + x1) / 2],
@@ -795,27 +813,27 @@ def reachtube_anime(
 def reachtube_tree_single(
     root: Union[AnalysisTree, AnalysisTreeNode],
     agent_id,
-    fig=go.Figure(),
+    fig: go.Figure() = go.Figure(),
     x_dim: int = 1,
     y_dim: int = 2,
-    color=None,
-    print_dim_list=None,
+    color_array=None,
+    theme_id=None,
     combine_rect=1,
-    plot_color=None,
 ):
     """It statically shows the verfication traces of one given agent."""
     if isinstance(root, AnalysisTree):
         root = root.root
-    if plot_color is None:
-        plot_color = colors
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)    
     global color_cnt
-    if color == None:
-        color = list(scheme_dict.keys())[color_cnt]
+    if theme_id == None:
+        theme_id = color_cnt % num_theme
         color_cnt = (color_cnt + 1) % num_theme
     queue = [root]
     show_legend = False
-    fillcolor = plot_color[scheme_dict[color]][1]
-    linecolor = plot_color[scheme_dict[color]][0]
+    fillcolor = color_array[theme_id][1]
+    linecolor = color_array[theme_id][0]
     while queue != []:
         node = queue.pop(0)
         traces = node.trace
@@ -1033,17 +1051,21 @@ def simulation_tree_single(
     fig: go.Figure() = go.Figure(),
     x_dim: int = 1,
     y_dim: int = 2,
-    color=None,
+    color_array=None,
+    theme_id=None,
     print_dim_list=None,
 ):
     """It statically shows the simulation traces of one given agent."""
     if isinstance(root, AnalysisTree):
         root = root.root
+    if color_array is None:
+        color_array = color_array_def
+    num_theme = len(color_array)
     global color_cnt
     queue = [root]
     color_id = 0
-    if color == None:
-        color = list(scheme_dict.keys())[color_cnt]
+    if theme_id == None:
+        theme_id = color_cnt % num_theme
         color_cnt = (color_cnt + 1) % num_theme
     start_list = []
     end_list = []
@@ -1071,7 +1093,7 @@ def simulation_tree_single(
                 x=trace[:, x_dim],
                 y=trace[:, y_dim],
                 mode="lines",
-                line_color=colors[scheme_dict[color]][color_id],
+                line_color=color_array[theme_id][color_id],
                 text=[
                     ["{:.2f}".format(trace[i, j]) for j in print_dim_list]
                     for i in range(trace.shape[0])
@@ -1404,10 +1426,6 @@ def num_digits(val: float):
         print(num)
         return num
     return False
-
-
-# fig= go.Figure()
-# fig.update_traces(line={'width':5})
 
 
 def update_style(fig: go.Figure() = go.Figure()):

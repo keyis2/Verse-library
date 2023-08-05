@@ -69,7 +69,7 @@ if __name__ == "__main__":
     if bench.config.compare:
         traces1, traces2 = bench.compare_run(60, time_step)
         exit(0)
-    traces = bench.run(60, time_step)
+    traces = bench.run(30, time_step)
     if bench.config.dump:
         traces.dump(os.path.join(script_dir, "output9_dryvr.json"))
 
@@ -99,15 +99,19 @@ if __name__ == "__main__":
     # if len(sys.argv)>1 and sys.argv[1]=='pl':
     if bench.config.plot:
         if traces.type == AnalysisTreeNodeType.REACH_TUBE:
-            fig = pv.Plotter()
-            fig = plot3dMap(tmp_map, ax=fig)
-            fig = plot3dReachtube(traces, "test1", 1, 2, 3, color="r", ax=fig)
-            fig = plot3dReachtube(traces, "test2", 1, 2, 3, color="b", ax=fig)
-            fig = plot_line_3d([0, 0, 0], [10, 0, 0], fig, "r", line_width=5)
-            fig = plot_line_3d([0, 0, 0], [0, 10, 0], fig, "g", line_width=5)
-            fig = plot_line_3d([0, 0, 0], [0, 0, 10], fig, "b", line_width=5)
-            fig.set_background("#e0e0e0")
-            fig.show()
+            # fig = pv.Plotter()
+            # fig = plot3dMap(tmp_map, ax=fig)
+            # fig = plot3dReachtube(traces, "test1", 1, 2, 3, color="r", ax=fig)
+            # fig = plot3dReachtube(traces, "test2", 1, 2, 3, color="b", ax=fig)
+            # fig = plot_line_3d([0, 0, 0], [10, 0, 0], fig, "r", line_width=5)
+            # fig = plot_line_3d([0, 0, 0], [0, 10, 0], fig, "g", line_width=5)
+            # fig = plot_line_3d([0, 0, 0], [0, 0, 10], fig, "b", line_width=5)
+            # fig.set_background("#e0e0e0")
+            # fig.show()
+            fig = go.Figure()
+            # fig = draw_map_3d(tmp_map, fig, fill_type="center")
+            fig = reachtube_tree_3d(traces, tmp_map, fig, 1, 2, 3, [1, 2, 3])
+            fig.show()  
         else:
             fig = go.Figure()
             fig = draw_map_3d(tmp_map, fig, fill_type="center")

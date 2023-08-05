@@ -58,15 +58,20 @@ if __name__ == "__main__":
     if bench.config.compare:
         traces1, traces2 = bench.compare_run(40, time_step)
         exit(0)
-    traces = bench.run(40, time_step)
+    traces = bench.run(5, time_step)
+    print('start plotting')
     if bench.config.plot:
-        import pyvista as pv
+        # import pyvista as pv
 
-        fig = pv.Plotter()
-        fig = plot3dMap(tmp_map, ax=fig, width=0.05)
-        fig = plot3dReachtube(traces, "test1", 1, 2, 3, "r", fig, edge=True)
-        fig = plot3dReachtube(traces, "test2", 1, 2, 3, "b", fig, edge=True)
-        fig.set_background("#e0e0e0")
+        # fig = pv.Plotter()
+        # fig = plot3dMap(tmp_map, ax=fig, width=0.05)
+        # fig = plot3dReachtube(traces, "test1", 1, 2, 3, "r", fig, edge=True)
+        # fig = plot3dReachtube(traces, "test2", 1, 2, 3, "b", fig, edge=True)
+        # fig.set_background("#e0e0e0")
+        # fig.show()
+        fig = go.Figure()
+        # fig = draw_map_3d(tmp_map, fig, fill_type="center")
+        fig = reachtube_tree_3d(traces, tmp_map, fig, 1, 2, 3, [1, 2, 3])
         fig.show()
     if bench.config.dump:
         traces.dump(os.path.join(script_dir, "output1.json"))
